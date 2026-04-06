@@ -1,2 +1,1 @@
-flask>=3.0.0
-gunicorn>=21.0.0
+web: gunicorn --bind 0.0.0.0:$PORT app:app
