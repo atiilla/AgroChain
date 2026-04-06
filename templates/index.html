@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgroChain — Agricultural Blockchain Tracking System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f2f7f2;
+    --surface: #ffffff;
+    --surface2: #eaf3ea;
+    --border: #c8d8c8;
+    --green: #1f8f4a;
+    --green-dim: #d7efdf;
+    --green-glow: rgba(31,143,74,0.12);
+    --amber: #8a6500;
+    --red: #c62828;
+    --text: #1b2f22;
+    --text-dim: #4f6a57;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(31,143,74,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(31,143,74,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(242,247,242,0.92);
+    backdrop-filter: blur(10px);
+  }
+  .logo {
+    font-size: 1.5rem; font-weight: 800; letter-spacing: -1px;
+    color: var(--green);
+  }
+  .logo span { color: var(--text-dim); font-weight: 400; }
+  .chain-status {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim);
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+  .status-dot.invalid { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── LAYOUT ── */
+  .container {
+    position: relative; z-index: 1;
+    max-width: 1400px; margin: 0 auto;
+    padding: 30px 40px;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 24px;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+  .stats-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .stats-card h3 {
+    font-family: var(--mono); font-size: 0.65rem;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 16px;
+  }
+  .stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-val {
+    font-family: var(--mono); font-size: 1.1rem;
+    color: var(--green); font-weight: 700;
+  }
+
+  .nav-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px;
+    cursor: pointer; color: var(--text);
+    font-family: var(--sans); font-size: 0.9rem;
+    transition: all 0.2s; text-align: left; width: 100%;
+  }
+  .nav-btn:hover, .nav-btn.active {
+    border-color: var(--green);
+    background: var(--green-glow);
+    color: var(--green);
+  }
+  .nav-btn .icon { font-size: 1.1rem; }
+
+  /* ── MAIN PANEL ── */
+  .main { display: flex; flex-direction: column; gap: 20px; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    display: none;
+  }
+  .panel.active { display: block; }
+
+  .panel-title {
+    font-size: 1.4rem; font-weight: 800;
+    margin-bottom: 20px; color: var(--green);
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  /* ── PRODUCT LIST ── */
+  .product-grid { display: grid; gap: 12px; }
+  .product-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 20px;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .product-card:hover { border-color: var(--green); background: var(--green-glow); }
+  .product-name { font-weight: 600; font-size: 1rem; }
+  .product-id { font-family: var(--mono); font-size: 0.7rem; color: var(--text-dim); margin-top: 3px; }
+  .product-badge {
+    font-family: var(--mono); font-size: 0.7rem;
+    background: var(--green-dim); color: #175532;
+    border-radius: 20px; padding: 4px 12px;
+    white-space: nowrap;
+  }
+
+  /* ── TIMELINE ── */
+  .timeline { position: relative; padding-left: 30px; }
+  .timeline::before {
+    content: '';
+    position: absolute; left: 8px; top: 0; bottom: 0;
+    width: 2px; background: var(--border);
+  }
+  .timeline-item {
+    position: relative; margin-bottom: 20px;
+    animation: slideIn 0.3s ease both;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:none} }
+  .timeline-dot {
+    position: absolute; left: -26px; top: 12px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 8px var(--green);
+  }
+  .timeline-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 18px;
+  }
+  .timeline-block:hover { border-color: var(--green); }
+  .event-type {
+    font-family: var(--mono); font-size: 0.7rem;
+    letter-spacing: 1px; color: var(--amber);
+    margin-bottom: 6px;
+  }
+  .event-time {
+    font-family: var(--mono); font-size: 0.65rem;
+    color: var(--text-dim); margin-bottom: 8px;
+  }
+  .event-hash {
+    font-family: var(--mono); font-size: 0.65rem;
+    color: var(--green); word-break: break-all;
+    margin-top: 8px;
+  }
+  .payload-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    margin-top: 8px;
+  }
+  .payload-item { font-size: 0.8rem; }
+  .payload-key { color: var(--text-dim); }
+  .payload-val { color: var(--text); font-family: var(--mono); font-size: 0.75rem; }
+  .validator-tag {
+    display: inline-block; margin-top: 8px;
+    font-family: var(--mono); font-size: 0.65rem;
+    background: rgba(245,200,66,0.1); color: var(--amber);
+    border: 1px solid rgba(245,200,66,0.2);
+    border-radius: 4px; padding: 2px 8px;
+  }
+
+  /* ── BLOCKCHAIN EXPLORER ── */
+  .block-list { display: grid; gap: 10px; max-height: 600px; overflow-y: auto; }
+  .block-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 18px;
+    font-family: var(--mono); font-size: 0.75rem;
+    display: grid; grid-template-columns: 60px 1fr auto;
+    gap: 16px; align-items: center;
+    transition: border-color 0.2s;
+  }
+  .block-item.tampered { border-color: var(--red) !important; }
+  .block-item:hover { border-color: var(--green); }
+  .block-idx {
+    font-size: 1.2rem; font-weight: 700;
+    color: var(--green); text-align: center;
+  }
+  .block-hash { color: var(--text-dim); font-size: 0.65rem; word-break: break-all; }
+  .block-type {
+    color: var(--amber); font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  /* ── ADD PRODUCT FORM ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 0.75rem; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+  .form-group input, .form-group select, .form-group textarea {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 14px;
+    color: var(--text); font-family: var(--sans); font-size: 0.9rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--green);
+  }
+  .form-full { grid-column: 1 / -1; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    background: var(--green); color: #000;
+    border: none; border-radius: 8px; padding: 12px 24px;
+    font-family: var(--sans); font-size: 0.9rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn:hover { background: #5eff7e; transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent; color: var(--green);
+    border: 1px solid var(--green);
+  }
+  .btn-outline:hover { background: var(--green-glow); }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: #ff7070; }
+
+  /* ── VALIDATION RESULT ── */
+  .valid-box {
+    border-radius: 10px; padding: 20px;
+    font-family: var(--mono); font-size: 0.85rem;
+    text-align: center;
+  }
+  .valid-box.ok { background: rgba(31,143,74,0.1); border: 1px solid var(--green); color: var(--green); }
+  .valid-box.fail { background: rgba(255,76,76,0.1); border: 1px solid var(--red); color: var(--red); }
+  .valid-icon { font-size: 3rem; margin-bottom: 10px; }
+
+  /* ── SEARCH ── */
+  .search-bar {
+    display: flex; gap: 10px; margin-bottom: 20px;
+  }
+  .search-bar input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 16px;
+    color: var(--text); font-family: var(--mono); font-size: 0.85rem; outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-bar input:focus { border-color: var(--green); }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 30px; right: 30px; z-index: 9999;
+    background: var(--surface); border: 1px solid var(--green);
+    border-radius: 10px; padding: 14px 20px;
+    font-size: 0.85rem; color: var(--green);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s;
+    max-width: 320px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  /* ── ADD EVENT SECTION ── */
+  .add-event-form {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; margin-top: 16px;
+  }
+  .add-event-form h4 {
+    font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 14px; font-family: var(--mono);
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
+
+  .empty-state {
+    text-align: center; padding: 40px;
+    color: var(--text-dim); font-family: var(--mono); font-size: 0.8rem;
+  }
+  .empty-state .big { font-size: 2rem; margin-bottom: 10px; }
+
+  @media (max-width: 900px) {
+    .container { grid-template-columns: 1fr; }
+    header { padding: 16px 20px; }
+    .container { padding: 16px 20px; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Agro<span>Chain</span></div>
+  <div class="chain-status">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Chain Verified</span>
+    &nbsp;|&nbsp; <span id="blockCount">— blocks</span>
+  </div>
+</header>
+
+<div class="container">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="stats-card">
+      <h3>Chain Stats</h3>
+      <div class="stat-row">
+        <span>Total Blocks</span>
+        <span class="stat-val" id="stat-blocks">—</span>
+      </div>
+      <div class="stat-row">
+        <span>Total Products</span>
+        <span class="stat-val" id="stat-products">—</span>
+      </div>
+      <div class="stat-row">
+        <span>Chain Status</span>
+        <span class="stat-val" id="stat-valid">—</span>
+      </div>
+    </div>
+
+    <div class="stats-card">
+      <h3>Authorized Validators (PoA)</h3>
+      <div id="validators-list" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;"></div>
+    </div>
+
+    <button class="nav-btn active" onclick="showPanel('products')">
+      <span class="icon">🌿</span> Product Tracking
+    </button>
+    <button class="nav-btn" onclick="showPanel('explorer')">
+      <span class="icon">🔗</span> Blockchain Gezgini
+    </button>
+    <button class="nav-btn" onclick="showPanel('add')">
+      <span class="icon">➕</span> Add New Product
+    </button>
+    <button class="nav-btn" onclick="showPanel('security')">
+      <span class="icon">🛡️</span> Security Test
+    </button>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- PANEL: PRODUCTS -->
+    <div class="panel active" id="panel-products">
+      <div class="panel-title">🌿 Product Tracking System</div>
+      <div class="search-bar">
+        <input type="text" id="productSearch" placeholder="Search product name or ID..." oninput="filterProducts()">
+      </div>
+      <div class="product-grid" id="productList">
+        <div class="empty-state"><div class="big">⏳</div>Loading...</div>
+      </div>
+    </div>
+
+    <!-- PANEL: PRODUCT DETAIL (dinamik) -->
+    <div class="panel" id="panel-detail">
+      <div class="panel-title" id="detail-title">📦 Product Detail</div>
+      <button class="btn btn-outline" onclick="showPanel('products')" style="margin-bottom:20px;font-size:0.8rem;padding:8px 16px;">← Back to List</button>
+      <div id="detail-back-pid" style="display:none;"></div>
+      <div class="timeline" id="productTimeline"></div>
+
+      <!-- Add Event -->
+      <div class="add-event-form">
+        <h4>⚡ Add New Event</h4>
+        <div class="form-grid">
+          <div class="form-group">
+             <label>Event Type</label>
+             <select id="newEventType">
+              <option>QUALITY_CONTROL</option>
+              <option>LOGISTICS_STARTED</option>
+              <option>CUSTOMS_APPROVED</option>
+              <option>RETAIL_DELIVERY</option>
+              <option>PESTICIDE_APPLICATION</option>
+              <option>STORAGE_RECORD</option>
+              <option>COLD_CHAIN_CHECK</option>
+              <option>CUSTOM</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Note / Location</label>
+            <input type="text" id="newEventNote" placeholder="e.g. Ankara Warehouse">
+          </div>
+          <div class="form-group form-full">
+            <button class="btn" onclick="addEventToProduct()">Add to Chain →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL: EXPLORER -->
+    <div class="panel" id="panel-explorer">
+      <div class="panel-title">🔗 Blockchain Gezgini</div>
+      <div class="block-list" id="blockList"></div>
+    </div>
+
+    <!-- PANEL: ADD PRODUCT -->
+    <div class="panel" id="panel-add">
+      <div class="panel-title">➕ Register New Product</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Product Name</label>
+          <input type="text" id="f-name" placeholder="e.g. Canakkale Tomato">
+        </div>
+        <div class="form-group">
+          <label>Variety</label>
+          <input type="text" id="f-variety" placeholder="e.g. Cherry">
+        </div>
+        <div class="form-group">
+          <label>Origin / Location</label>
+          <input type="text" id="f-origin" placeholder="e.g. Canakkale, Turkey">
+        </div>
+        <div class="form-group">
+          <label>Harvest Date</label>
+          <input type="date" id="f-harvest">
+        </div>
+        <div class="form-group form-full">
+          <label>Farmer Name</label>
+          <input type="text" id="f-farmer" placeholder="e.g. Ahmet Yildiz">
+        </div>
+        <div class="form-group form-full">
+          <button class="btn" onclick="addProduct()">🌱 Save to Blockchain</button>
+        </div>
+      </div>
+      <div id="add-result" style="margin-top:16px;"></div>
+    </div>
+
+    <!-- PANEL: SECURITY -->
+    <div class="panel" id="panel-security">
+      <div class="panel-title">🛡️ Security & Validation Test</div>
+      <p style="color:var(--text-dim);font-size:0.9rem;margin-bottom:20px;line-height:1.6;">
+        This panel is designed to demonstrate blockchain resilience against cyberattacks.
+        By tampering with a block, you can observe how the SHA-256 hash chain is broken.
+      </p>
+
+      <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn btn-outline" onclick="validateChain()">✅ Validate Chain</button>
+        <button class="btn btn-danger" onclick="tamperPrompt()">⚠️ Tamper Block (Demo)</button>
+        <button class="btn btn-outline" onclick="loadStats()">🔄 Refresh</button>
+      </div>
+
+      <div id="validation-result"></div>
+
+      <div style="margin-top:24px;">
+        <h3 style="font-family:var(--mono);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;">How SHA-256 Hash Works</h3>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:var(--mono);font-size:0.75rem;line-height:1.8;color:var(--text-dim);">
+          <span style="color:var(--green);">Block(n).hash</span> = SHA256( index + timestamp + data + <span style="color:var(--amber);">Block(n-1).hash</span> + validator )<br>
+          <br>
+          If <span style="color:var(--red);">1 byte changes</span> in any block, that block's hash becomes completely different.<br>
+          This change invalidates the <span style="color:var(--red);">previous_hash</span> field of all following blocks.<br>
+          <br>
+          PoA validators detect this inconsistency immediately → <span style="color:var(--red);">CHAIN INVALID</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';
+let allProducts = [];
+let currentProductId = null;
+
+// ── PANEL NAVIGATION ──
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+
+  const btns = { products: 0, explorer: 1, add: 2, security: 3 };
+  const navBtns = document.querySelectorAll('.nav-btn');
+  if (btns[name] !== undefined) navBtns[btns[name]].classList.add('active');
+
+  if (name === 'explorer') loadExplorer();
+  if (name === 'products') loadProducts();
+}
+
+// ── TOAST ──
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (err ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ── STATS ──
+async function loadStats() {
+  const d = await fetch('/api/stats').then(r=>r.json());
+  document.getElementById('stat-blocks').textContent = d.total_blocks;
+  document.getElementById('stat-products').textContent = d.total_products;
+  document.getElementById('stat-valid').textContent = d.chain_valid ? '✓ Valid' : '✗ Broken';
+  document.getElementById('stat-valid').style.color = d.chain_valid ? 'var(--green)' : 'var(--red)';
+  document.getElementById('blockCount').textContent = d.total_blocks + ' blocks';
+
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'status-dot' + (d.chain_valid ? '' : ' invalid');
+  txt.textContent = d.chain_valid ? 'Chain Verified' : 'CHAIN BROKEN!';
+
+  const vlist = document.getElementById('validators-list');
+   vlist.innerHTML = d.validators.map(v =>
+    `<div style="font-family:var(--mono);font-size:0.7rem;background:rgba(31,143,74,0.08);border:1px solid var(--border);border-radius:4px;padding:5px 10px;color:var(--text-dim);">⬡ ${v}</div>`
+  ).join('');
+}
+
+// ── PRODUCTS ──
+async function loadProducts() {
+  const data = await fetch('/api/products').then(r=>r.json());
+  allProducts = data;
+  renderProducts(data);
+}
+
+function renderProducts(data) {
+  const el = document.getElementById('productList');
+  if (!data.length) {
+    el.innerHTML = '<div class="empty-state"><div class="big">🌱</div>No products registered yet.</div>';
+    return;
+  }
+  el.innerHTML = data.map(p => `
+    <div class="product-card" onclick="showProductDetail('${p.product_id}')">
+      <div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-id">${p.product_id}</div>
+        <div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;">${p.event_count} events · Last: ${p.last_event}</div>
+      </div>
+      <div class="product-badge">${p.event_count} blocks →</div>
+    </div>
+  `).join('');
+}
+
+function filterProducts() {
+  const q = document.getElementById('productSearch').value.toLowerCase();
+  renderProducts(allProducts.filter(p =>
+    p.name.toLowerCase().includes(q) || p.product_id.toLowerCase().includes(q)
+  ));
+}
+
+// ── PRODUCT DETAIL ──
+async function showProductDetail(pid) {
+  currentProductId = pid;
+  document.getElementById('detail-back-pid').textContent = pid;
+  showPanel('detail');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  const blocks = await fetch(`/api/product/${pid}`).then(r=>r.json());
+  const name = blocks[0]?.data?.payload?.product || pid;
+  document.getElementById('detail-title').textContent = `📦 ${name}`;
+
+  const tl = document.getElementById('productTimeline');
+  tl.innerHTML = blocks.map((b,i) => {
+    const payload = b.data.payload || {};
+    const payloadHtml = Object.entries(payload).slice(0,6).map(([k,v]) =>
+      typeof v === 'object' ? '' : `<div class="payload-item"><span class="payload-key">${k}:</span> <span class="payload-val">${v}</span></div>`
+    ).join('');
+    return `
+      <div class="timeline-item" style="animation-delay:${i*0.05}s">
+        <div class="timeline-dot"></div>
+        <div class="timeline-block">
+          <div class="event-type">${b.data.event_type}</div>
+          <div class="event-time">${b.timestamp}</div>
+          <div class="payload-grid">${payloadHtml}</div>
+          <div class="validator-tag">⬡ ${b.validator}</div>
+          <div class="event-hash">HASH: ${b.hash}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── ADD EVENT ──
+async function addEventToProduct() {
+  if (!currentProductId) return;
+  const eventType = document.getElementById('newEventType').value;
+  const note = document.getElementById('newEventNote').value;
+  const r = await fetch('/api/add_event', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      product_id: currentProductId,
+      event_type: eventType,
+      payload: { note: note || 'Manual entry', date: new Date().toISOString().split('T')[0] }
+    })
+  }).then(r=>r.json());
+
+  if (r.success) {
+    toast('✅ Block added to chain! Hash: ' + r.block.hash.slice(0,16) + '...');
+    document.getElementById('newEventNote').value = '';
+    await showProductDetail(currentProductId);
+    await loadStats();
+  } else {
+    toast('Error: ' + r.error, true);
+  }
+}
+
+// ── ADD PRODUCT ──
+async function addProduct() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('Product name is required!', true); return; }
+  const r = await fetch('/api/new_product', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      name,
+      variety: document.getElementById('f-variety').value,
+      origin: document.getElementById('f-origin').value,
+      harvest_date: document.getElementById('f-harvest').value,
+      farmer: document.getElementById('f-farmer').value
+    })
+  }).then(r=>r.json());
+
+  document.getElementById('add-result').innerHTML = `
+    <div style="background:rgba(31,143,74,0.1);border:1px solid var(--green);border-radius:8px;padding:16px;font-family:var(--mono);font-size:0.8rem;">
+      <div style="color:var(--green);font-weight:700;margin-bottom:8px;">✅ Saved to Blockchain!</div>
+      <div>ID: <span style="color:var(--amber);">${r.product_id}</span></div>
+      <div>Hash: <span style="color:var(--text-dim);">${r.block.hash}</span></div>
+      <div style="margin-top:10px;">
+        <button class="btn" style="font-size:0.8rem;padding:8px 16px;" onclick="showProductDetail('${r.product_id}')">Track Product →</button>
+      </div>
+    </div>
+  `;
+  toast('🌱 ' + name + ' added to chain!');
+  await loadStats();
+}
+
+// ── EXPLORER ──
+async function loadExplorer() {
+  const chain = await fetch('/api/chain').then(r=>r.json());
+  const el = document.getElementById('blockList');
+  el.innerHTML = chain.map(b => {
+    const eventType = b.data.event_type || b.data.type || 'GENESIS';
+    const pid = b.data.product_id || '—';
+    const isTampered = b.data.payload && b.data.payload.tampered;
+    return `
+      <div class="block-item ${isTampered ? 'tampered' : ''}">
+        <div class="block-idx">#${b.index}</div>
+        <div>
+          <div class="block-type">${eventType} ${isTampered ? '⚠️ TAMPERED' : ''}</div>
+          <div style="font-size:0.65rem;color:var(--text-dim);margin-top:2px;">Product: ${pid} · Validator: ${b.validator}</div>
+          <div class="block-hash">▸ ${b.hash}</div>
+        </div>
+        <div style="font-size:0.65rem;color:var(--text-dim);text-align:right;">
+          ${b.timestamp.split('T')[0]}<br>
+          <span style="color:var(--text-dim);">${b.timestamp.split('T')[1]?.slice(0,8)}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── SECURITY ──
+async function validateChain() {
+  const r = await fetch('/api/validate').then(r=>r.json());
+  const el = document.getElementById('validation-result');
+  if (r.valid) {
+    el.innerHTML = `<div class="valid-box ok">
+      <div class="valid-icon">✅</div>
+      <div style="font-size:1.1rem;font-weight:700;">CHAIN VALID</div>
+      <div style="margin-top:8px;color:rgba(31,143,74,0.75);">${r.total_blocks} blocks verified · SHA-256 integrity preserved</div>
+    </div>`;
+  } else {
+    el.innerHTML = `<div class="valid-box fail">
+      <div class="valid-icon">❌</div>
+      <div style="font-size:1.1rem;font-weight:700;">CHAIN BROKEN!</div>
+      <div style="margin-top:8px;">Hash mismatch detected at block ${r.broken_at_index}.</div>
+      <div style="margin-top:6px;font-size:0.75rem;">Tampering was successfully detected. In a real system, this block would be rejected.</div>
+    </div>`;
+  }
+  await loadStats();
+}
+
+async function tamperPrompt() {
+  const idx = prompt('Which block do you want to tamper with? (1-' + (parseInt(document.getElementById('stat-blocks').textContent)-1) + ')');
+  if (!idx) return;
+  await fetch('/api/tamper/' + idx, {method:'POST'});
+  toast('⚠️ Block ' + idx + ' tampered! Validate the chain now.', true);
+  await loadStats();
+  await validateChain();
+}
+
+// ── INIT ──
+loadStats();
+loadProducts();
+setInterval(loadStats, 10000);
+</script>
+</body>
+</html>
